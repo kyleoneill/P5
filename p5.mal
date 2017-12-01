@@ -1,0 +1,213 @@
+		.data
+input: .space 80
+integers: .space 40
+empty: .asciiz "Line contains only whitespace characters.\n"
+prompt_user: .asciiz "Enter the line? "
+int_number: .asciiz "No. of integers: "
+max_number: .asciiz "Maximum integer: "
+max_ones: .asciiz "Maximum number of 1's in the binary representation: "
+numbers_with_max_ones: .asciiz "Integers of maximum number of 1's in the binary search representation:\n"
+
+newline: .asciiz "\n"
+whitespace: .asciiz " "
+tab: .asciiz "\t"
+
+		.text
+		.globl  main
+main:
+			#prompt the user to enter the line of integers
+			li $v0, 4
+			la $a0, prompt_user
+			syscall
+			
+			#store the user input line
+			la $a0, input
+			li $a1, 80
+			li $v0, 8
+			syscall
+			
+			#Call check_for_empty function with input string as argument
+			la $a0, input
+			jal check_for_empty
+			bnez $v0, main_empty_line 					#If check_for_empty returned 1, the string is empty. Jump to main_empty_line
+			
+			#Call parse_string function with input string and integers array as arguments
+			la $a0, input
+			la $a1, integers
+			jal parse_string
+			addi $s0, $v0, 0							#$s0 will hold the number of integers in the array
+			
+			#print the number of integers entered
+			li $v0, 4
+			la $a0, int_number
+			syscall
+			li $v0, 1
+			addi $a0, $s0, 0
+			syscall
+			li $v0, 4
+			la $a0, newline
+			syscall
+			
+			la $t0, integers							#$t0 will hold the address of integers array for find max loop
+			li $t1, 0									#$t1 will be the current int index for find max loop
+			lw $t2, 0($t0)								#$t2 will be the current int for find max loop
+			addiu $t3, $t2, 0							#t3 will be the current max for find max loop, initialized to the first int
+			addiu $t0, $t0, 4							#increment address for integers array
+			addiu $t1, $t1, 1							#increment index
+			main_find_max_loop:
+				lw $t2, 0($t0)							#re-load current int
+				slt $t4, $t3, $t2 						#If the current max is less than the current integer, current integer becomes the new max
+				beqz $t4, main_find_max_increment		#else, increment the loop
+				addi $t3, $t2, 0
+			main_find_max_increment:
+				addiu $t0, $t0, 4						#increment address for integers array
+				addiu $t1, $t1, 1						#increment index
+				slt $t4, $t1, $s0 						#If the current index of integers is less than the total amount of intergers, continue loop
+				bnez $t4, main_find_max_loop
+			main_find_max_loop_end:
+				#print the maximum integer entered
+				li $v0, 4
+				la $a0, max_number
+				syscall
+				li $v0, 1
+				addi $a0, $t3, 0
+				syscall
+				li $v0, 4
+				la $a0, newline
+				syscall
+			
+			#Call find_max_ones function with integers array as argument
+			la $a0 integers
+			jal find_max_ones
+			addi $s1, $v0, 0
+			
+			#print the max number of 1's
+			li $v0, 4
+			la $a0, max_ones
+			syscall
+			li $v0, 1
+			addi $a0, $s1, 0
+			syscall
+			li $v0, 4
+			la $a0, newline
+			syscall
+			
+			j main_exit
+		
+	main_empty_line:
+			#Print that the line is empty
+			li $v0, 4
+			la $a0, empty
+			syscall
+			
+	main_exit:
+			#syscall to end the program
+			li $v0, 10
+			syscall
+		
+		
+#Check_for_empty is a function which takes an address to a string and returns 1 if the string contains no digits, 0 otherwise
+check_for_empty:
+	check_for_empty_loop:
+			lbu $t0, 0($a0)								#load the current character from character array into $t0
+			beqz $t0, check_for_empty_return_true		#if the current character is null, return 1 (string is empty)
+			sltiu $t1, $t0, 48 							#If the current character's ascii value is less than 48 it cannot be a digit, end loop
+			bnez $t1, check_for_empty_loop_end 			
+			sltiu $t1, $t0, 58							#If the current character's ascii value is greater than 58 it cannot be a digit, end loop
+			beqz $t1, check_for_empty_loop_end 			
+			j check_for_empty_return_false				#If the current character passed the two less than tests, it is a digit. Return 0
+	check_for_empty_loop_end:
+			addi $a0, $a0, 1							#Increment pointer of character array to next character in the array
+			j check_for_empty_loop						#Begin loop again
+	check_for_empty_return_true:
+			li $v0, 1									#Return 1
+			jr $ra
+	check_for_empty_return_false:
+			li $v0, 0									#Return 0
+			jr $ra
+
+
+#parse_string is a function which takes an address to a string and an address to an array. It parses the string and stores numbers within it into the array. Returns the amount of numbers added into the array.
+parse_string:
+		li $v0, 0
+		#Loop checks if the current character of the string is whitespace. If it is, the loop increments. Else, continue parsing
+		parse_string_skip_whitespace_loop:
+			lbu $t0, 0($a0)								#load the current character from character array into $t0
+			beqz $t0, parse_string_return				#if the current character is null, return 1 (string is empty)
+			sltiu $t1, $t0, 48 							#If the current character's ascii value is less than 48 it cannot be a digit, end loop
+			bnez $t1, parse_string_skip_whitespace_loop_end
+			sltiu $t1, $t0, 58							#If the current character's ascii value is greater than 58 it cannot be a digit, end loop
+			beqz $t1, parse_string_skip_whitespace_loop_end
+			
+			#Loop constructs a number by iterating through digits until a whitespace is reached
+			parse_string_parse_digit:
+				li $t2, 0								#$t2 will hold the number being built
+				parse_string_parse_digit_loop:
+					lbu $t0, 0($a0)						#load the current character from character array into $t0
+					sltiu $t1, $t0, 48 					#If the current character's ascii value is less than 48 it cannot be a digit, end loop
+					bnez $t1, parse_string_parse_digit_end
+					sltiu $t1, $t0, 58					#If the current character's ascii value is greater than 58 it cannot be a digit, end loop
+					beqz $t1, parse_string_parse_digit_end
+					addiu $t0, $t0, -48					#subtract 48 from value in $t0, converting it from ascii char to integer
+					li $t3, 10							#Store 10 in $t3, used to construct number
+					multu $t2, $t3						#Multiply the number being built by 10
+					mflo $t2							#store result of multiplication in $t2
+					addu $t2, $t2, $t0					#Add multiplication result to current digit
+				parse_string_parse_digit_loop_increment:
+					addi $a0, $a0, 1					#Increment the string array being read
+					j parse_string_parse_digit_loop
+					
+				parse_string_parse_digit_end:
+					sw $t2, 0($a1)						#Store the current number in the integer array
+					addi $a1, 4							#Increment the integer array
+					addi $v0, $v0, 1					#Increment the amount of integers being added to integer array
+					j parse_string_skip_whitespace_loop
+			
+		parse_string_skip_whitespace_loop_end:
+			addi $a0, $a0, 1
+			j parse_string_skip_whitespace_loop
+		parse_string_return:
+			jr $ra
+
+
+#find_max_ones is a function which takes an address to an array. It iterates through the array to find the maximum number of 1's in the binary representation of ints in the array, and returns the max.
+find_max_ones:
+		li $t1, 0									#$t1 will be the current int index for find_max_ones
+		li $v0, 0									#$v0 will hold the maximum number of 1's in a number
+		li $t3, 32									#$t3 will hold the amount of bits in an int to control inner loop
+		find_max_ones_array_loop:
+			lw $t0, 0($a0)							#load the current integer from integer array into $t0
+			li $t6, 0								#$t6 will hold the number of 1's for a given number0
+			li $t4, 0								#$t4 will hold the current bit being looked at to compare to $t3 and determine when to end inner loop
+			find_max_ones_number_loop:				#inner loop iterates through bits of a number to count how many are 1
+				beq $t3, $t4, find_max_ones_number_loop_end	
+				andi $t5, $t0, 1					#Check if right most bit of a number is 1
+				beq $t5, $zero, find_max_ones_number_loop_increment
+				addi $t6, $t6, 1					#If the current bit is 1, increment $t6
+				find_max_ones_number_loop_increment:
+				addi $t4, $t4, 1					#Increment counter of which bit is being looked at
+				li $t7, 1
+				srl $t0, $t0, $t7					#Increment current number by right shifting it
+				j find_max_ones_number_loop
+			find_max_ones_number_loop_end:	
+			sltu $t7, $v0, $t6						#If the current number has more 1's than the current 1 max, it becomes the new max
+			beq $t7, $zero, find_max_ones_array_loop_increment
+			addi $v0, $t6, 0
+			find_max_ones_array_loop_increment:
+			addi $a0, $a0, 4
+			addi $t1, $t1, 1
+			sltu $t7, $s0, $t1
+			beq $t7, $zero, find_max_ones_array_loop
+			j find_max_ones_array_loop_end
+		find_max_ones_array_loop_end:
+			jr $ra
+
+
+
+
+
+
+
+
+
+
