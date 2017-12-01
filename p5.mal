@@ -7,7 +7,6 @@ int_number: .asciiz "No. of integers: "
 max_number: .asciiz "Maximum integer: "
 max_ones: .asciiz "Maximum number of 1's in the binary representation: "
 numbers_with_max_ones: .asciiz "Integers of maximum number of 1's in the binary search representation:\n"
-
 newline: .asciiz "\n"
 whitespace: .asciiz " "
 tab: .asciiz "\t"
