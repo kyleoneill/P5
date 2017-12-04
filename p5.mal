@@ -3,8 +3,8 @@
 # Friday 11:30
 
 		.data
-input: .space 80
-integers: .space 40
+input: .space 320
+integers: .space 320
 empty: .asciiz "Line contains only whitespace characters.\n"
 prompt_user: .asciiz "Enter the line? "
 int_number: .asciiz "No. of integers: "
@@ -181,7 +181,7 @@ parse_string:
 
 #find_max_ones is a function which takes an address to an array. It iterates through the array to find the maximum number of 1's in the binary representation of ints in the array, and returns the max.
 find_max_ones:
-		li $t1, 0									#$t1 will be the current int index for find_max_ones
+		li $t1, 1									#$t1 will be the current int index for find_max_ones
 		li $v0, 0									#$v0 will hold the maximum number of 1's in a number
 		li $t3, 32									#$t3 will hold the amount of bits in an int to control inner loop
 		find_max_ones_array_loop:
@@ -196,16 +196,16 @@ find_max_ones:
 				find_max_ones_number_loop_increment:
 				addi $t4, $t4, 1					#Increment counter of which bit is being looked at
 				li $t7, 1
-				srl $t0, $t0, $t7					#Increment current number by right shifting it
+				srl $t0, $t0, $t7					#Increment current bit by right shifting current number
 				j find_max_ones_number_loop
 			find_max_ones_number_loop_end:	
 			sltu $t7, $v0, $t6						#If the current number has more 1's than the current 1 max, it becomes the new max
 			beq $t7, $zero, find_max_ones_array_loop_increment
 			addi $v0, $t6, 0
 			find_max_ones_array_loop_increment:
-			addi $a0, $a0, 4
-			addi $t1, $t1, 1
-			sltu $t7, $s0, $t1
+			addi $a0, $a0, 4						#Increment the current number in the integer array
+			addi $t1, $t1, 1						#Increment the current number index
+			sltu $t7, $s0, $t1						#If we've gone through all the numbers in the integer array, end the function. Else, jump back to the beginning of outer loop
 			beq $t7, $zero, find_max_ones_array_loop
 			j find_max_ones_array_loop_end
 		find_max_ones_array_loop_end:
@@ -214,7 +214,7 @@ find_max_ones:
 
 #find_max_ones_numbers is a function which iterates through the integer array and prints the numbers made up of the same amount of binary 1's as the 1's max
 find_max_ones_numbers:
-		li $t1, 0									#$t1 will be the current int index
+		li $t1, 1									#$t1 will be the current int index
 		li $t2, 0									#$t2 will hold the max number of 1's in a number
 		li $t3, 32									#$t3 will hold the amount of bits in an int to control inner loop
 		la $t8 integers
@@ -227,37 +227,25 @@ find_max_ones_numbers:
 				beq $t3, $t5, find_max_ones_numbers_inner_loop_end
 				andi $t6, $t0, 1					#check if the right most bit of a number is 1
 				beq $t6, $zero, find_max_ones_numbers_inner_loop_increment
-				addi $t4, $t4, 1
+				addi $t4, $t4, 1					#If the current bit is 1, increment $t4
 				find_max_ones_numbers_inner_loop_increment:
-				addi $t5, $t5, 1
-				li $t7, 1
-				srl $t0, $t0, $t7
+				addi $t5, $t5, 1					#Increment counter of which bit is being looked at
+				li $t7, 1							
+				srl $t0, $t0, $t7					#Increment current bit by right shifting current number
 				j find_max_ones_numbers_inner_loop
 			find_max_ones_numbers_inner_loop_end:
-			bne $t4, $s1, find_max_ones_numbers_increment
-			li $v0, 1
+			bne $t4, $s1, find_max_ones_numbers_increment 	#If the amount of 1's in the binary representation of a number != the max number of 1's, do not print the number
+			li $v0, 1								#If it does, print number
 			addi $a0, $t9, 0
 			syscall
-			li $v0, 4
+			li $v0, 4								#Print a newline after the number
 			la $a0, newline
 			syscall
 			find_max_ones_numbers_increment:
-			addi $t8, $t8, 4
-			addi $t1, $t1, 1
-			sltu $t7, $s0, $t1
+			addi $t8, $t8, 4						#Increment the current number in the integer array
+			addi $t1, $t1, 1						#Increment the current number index
+			sltu $t7, $s0, $t1						#If we've gone through all the numbers in the integer array, end the function. Else, jump back to the beginning of outer loop
 			beq $t7, $zero, find_max_ones_numbers_loop
 			j find_max_ones_numbers_loop_end
 		find_max_ones_numbers_loop_end:
 			jr $ra
-
-
-
-
-
-
-
-
-
-
-
-
